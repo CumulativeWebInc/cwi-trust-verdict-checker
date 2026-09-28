@@ -1,0 +1,28 @@
+{
+  "engine_version": "1.0.0",
+  "subject": {
+    "agent_id": "MUSE_CWI",
+    "display_name": "KingCode"
+  },
+  "context": "agent-trust",
+  "observed_at": "2026-09-15T19:30:00Z",
+  "signals": {
+    "erc8004": [
+      {
+        "evidence_id": "e8004-only",
+        "kind": "protocol-registration-claim",
+        "issuer": "moltbook",
+        "identity_cluster": null,
+        "issuer_type": "third_party",
+        "description": "Fixture evidence item e8004-only.",
+        "status": "verified",
+        "observed_at": "2026-09-15T19:30:00Z",
+        "source_url": null,
+        "source_ref": "fixture",
+        "weight_class": 2
+      }
+    ],
+    "needle_drop": [],
+    "first_spin": []
+  }
+}
