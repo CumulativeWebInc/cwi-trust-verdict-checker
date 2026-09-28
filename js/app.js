@@ -1,7 +1,15 @@
-/* CWI Trust Verdict Checker — UI controller.
- * All user and engine strings are rendered via textContent only.
- * Scoring runs locally in the browser (CWIVerdict.run). Nothing is uploaded.
- * No eval, no innerHTML with dynamic data.
+/* CWI Trust Verdict Checker — suite redesign UI controller.
+ *
+ * VERDICT PATH (live, not stubbed): scoring runs entirely in the browser via
+ * window.CWIVerdict (js/verdict-engine.js) — the parity-tested JavaScript port of
+ * trust/engine.py. tests/parity.mjs requires byte-identical outputs vs the Python
+ * engine on the 20-case gate corpus + a 300-case fuzz set, so the verdicts this
+ * page renders ARE the engine's verdicts: same gates, same weights, same
+ * input_sha256. No server call, no simulation, nothing invented. If the engine
+ * script fails to load, scoring is refused (see the ENGINE guard below).
+ *
+ * All user and engine strings are rendered via textContent only (no innerHTML
+ * with dynamic data). No eval, no network.
  */
 (function () {
   "use strict";
@@ -9,6 +17,19 @@
   var ENGINE = window.CWIVerdict;
   var PASTE_MAX = 200000;      // 200 KB paste cap
   var LINK_MAX = 50000;        // 50 KB share-link cap
+
+  if (!ENGINE || typeof ENGINE.run !== "function") {
+    // Engine failed to load: refuse scoring rather than simulate it.
+    document.addEventListener("DOMContentLoaded", function () {
+      var box = document.getElementById("error-box");
+      if (box) {
+        box.textContent = "The verdict engine (js/verdict-engine.js) failed to load. " +
+          "Scoring is unavailable — this page will not simulate a verdict.";
+        box.hidden = false;
+      }
+    });
+    return;
+  }
 
   /* ---------- safe DOM helpers ---------- */
   function el(tag, cls, text) {
@@ -19,9 +40,13 @@
   }
   function $(id) { return document.getElementById(id); }
 
-  function safeScroll(elm) {
-    try { if (elm && typeof elm.scrollIntoView === "function") elm.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
-    catch (e) { /* scroll unavailable — non-fatal */ }
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function safeScroll(node) {
+    try {
+      if (node && typeof node.scrollIntoView === "function")
+        node.scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" });
+    } catch (e) { /* scroll unavailable — non-fatal */ }
   }
 
   function showError(msg) {
@@ -33,21 +58,35 @@
   }
   function clearError() { $("error-box").hidden = true; $("error-box").textContent = ""; }
 
-  /* ---------- tabs ---------- */
+  /* ---------- tabs (roving tabindex + arrow keys) ---------- */
   var tabs = [
     [$("tab-guided"), $("panel-guided")],
     [$("tab-paste"), $("panel-paste")],
     [$("tab-samples"), $("panel-samples")]
   ];
-  tabs.forEach(function (pair) {
-    pair[0].addEventListener("click", function () {
-      tabs.forEach(function (p) {
-        var active = p[0] === pair[0];
-        p[0].classList.toggle("active", active);
-        p[0].setAttribute("aria-selected", active ? "true" : "false");
-        p[1].classList.toggle("active", active);
-        p[1].hidden = !active;
-      });
+  function selectTab(idx) {
+    tabs.forEach(function (p, i) {
+      var active = i === idx;
+      p[0].classList.toggle("active", active);
+      p[0].setAttribute("aria-selected", active ? "true" : "false");
+      p[0].tabIndex = active ? 0 : -1;
+      p[1].classList.toggle("active", active);
+      p[1].hidden = !active;
+    });
+  }
+  function focusTab(idx) {
+    selectTab(idx);
+    tabs[idx][0].focus();
+  }
+  tabs.forEach(function (pair, i) {
+    pair[0].addEventListener("click", function () { selectTab(i); });
+    pair[0].addEventListener("keydown", function (ev) {
+      var n = null;
+      if (ev.key === "ArrowRight") n = (i + 1) % tabs.length;
+      else if (ev.key === "ArrowLeft") n = (i - 1 + tabs.length) % tabs.length;
+      else if (ev.key === "Home") n = 0;
+      else if (ev.key === "End") n = tabs.length - 1;
+      if (n !== null) { ev.preventDefault(); focusTab(n); }
     });
   });
 
@@ -78,66 +117,88 @@
       sel.appendChild(opt);
     });
   }
-  function field(label, input, span2) {
-    var lab = el("label", "field" + (span2 ? " span2" : ""));
-    lab.appendChild(document.createTextNode(label + " "));
-    lab.appendChild(input);
-    return lab;
-  }
-  function textInput(ph, maxlen) {
+  function textInput(id, ph, maxlen) {
     var i = document.createElement("input");
-    i.type = "text"; i.placeholder = ph || ""; i.maxLength = maxlen || 200;
+    i.type = "text"; i.id = id; i.placeholder = ph || "";
+    i.maxLength = maxlen || 200;
     i.setAttribute("autocomplete", "off");
     return i;
+  }
+  function labeledField(labelText, input, span2, required) {
+    var wrap = el("div", "field" + (span2 ? " span2" : ""));
+    var lab = document.createElement("label");
+    lab.setAttribute("for", input.id);
+    lab.appendChild(document.createTextNode(labelText + " "));
+    if (required) {
+      var r = el("span", "req", "*");
+      r.setAttribute("aria-hidden", "true");
+      lab.appendChild(r);
+      lab.appendChild(el("span", "visually-hidden", "(required)"));
+    }
+    wrap.appendChild(lab);
+    wrap.appendChild(input);
+    return wrap;
   }
 
   function addEvidenceRow() {
     evCount++;
-    var row = el("div", "ev-row");
-    row.setAttribute("data-row", String(evCount));
+    var n = evCount;
+    var fs = document.createElement("fieldset");
+    fs.className = "ev-row";
+    fs.setAttribute("data-row", String(n));
+    fs.appendChild(el("legend", null, "Evidence item " + n));
 
-    var kind = textInput("e.g. erc8004-registration");
-    var issuer = textInput("e.g. 0xAgent… or curator name");
+    var kind = textInput("ev-" + n + "-kind", "e.g. erc8004-registration");
+    var issuer = textInput("ev-" + n + "-issuer", "e.g. 0xAgent… or curator name");
+    var family = document.createElement("select");
+    family.id = "ev-" + n + "-family";
+    selectOpts(family, [["erc8004", "erc8004 — identity & registration"],
+                        ["needle_drop", "needle_drop — tasks & commercial history"],
+                        ["first_spin", "first_spin — published verdicts & reviews"]]);
     var itype = document.createElement("select");
+    itype.id = "ev-" + n + "-itype";
     selectOpts(itype, [["self", "self — asserted by the agent itself (counts half)"],
                        ["third_party", "third_party — attested by someone else"],
                        ["protocol", "protocol — sealed on a ledger/protocol"]]);
     var status = document.createElement("select");
+    status.id = "ev-" + n + "-status";
     selectOpts(status, [["verified", "verified — counts toward the score"],
                         ["claimed", "claimed — contributes zero"],
                         ["pending", "pending — contributes zero"],
                         ["disputed", "disputed — blocks scoring until resolved"],
                         ["refuted", "refuted — contributes zero"]]);
     var wclass = document.createElement("select");
+    wclass.id = "ev-" + n + "-wclass";
     selectOpts(wclass, [["1", "1 — self-asserted"], ["2", "2 — third-party attested"],
                         ["3", "3 — protocol/ledger sealed"]]);
-    var desc = textInput("What is this evidence, concretely?", 500);
-    var cluster = textInput("identity cluster (optional — groups Sybil lookalikes)");
-    var family = document.createElement("select");
-    selectOpts(family, [["erc8004", "erc8004 — identity & registration"],
-                        ["needle_drop", "needle_drop — tasks & commercial history"],
-                        ["first_spin", "first_spin — published verdicts & reviews"]]);
+    var cluster = textInput("ev-" + n + "-cluster", "identity cluster (optional — groups Sybil lookalikes)");
+    var desc = textInput("ev-" + n + "-desc", "What is this evidence, concretely?", 500);
 
-    row.appendChild(field("Kind *", kind));
-    row.appendChild(field("Issuer *", issuer));
-    row.appendChild(field("Signal family", family));
-    row.appendChild(field("Issuer type", itype));
-    row.appendChild(field("Status", status));
-    row.appendChild(field("Weight class", wclass));
-    row.appendChild(field("Identity cluster", cluster));
-    row.appendChild(field("Description *", desc, true));
+    fs.appendChild(labeledField("Kind", kind, false, true));
+    fs.appendChild(labeledField("Issuer", issuer, false, true));
+    fs.appendChild(labeledField("Signal family", family));
+    fs.appendChild(labeledField("Issuer type", itype));
+    fs.appendChild(labeledField("Status", status));
+    fs.appendChild(labeledField("Weight class", wclass));
+    fs.appendChild(labeledField("Identity cluster", cluster));
+    fs.appendChild(labeledField("Description", desc, true, true));
 
     var rm = el("button", "btn small ghost ev-remove", "Remove this evidence");
     rm.type = "button";
-    rm.addEventListener("click", function () { row.remove(); });
-    row.appendChild(rm);
+    rm.setAttribute("aria-label", "Remove evidence item " + n);
+    rm.addEventListener("click", function () { fs.remove(); });
+    fs.appendChild(rm);
 
-    row._inputs = { kind: kind, issuer: issuer, itype: itype, status: status,
-                    wclass: wclass, desc: desc, cluster: cluster, family: family };
-    evList.appendChild(row);
-    return row;
+    fs._inputs = { kind: kind, issuer: issuer, itype: itype, status: status,
+                   wclass: wclass, desc: desc, cluster: cluster, family: family };
+    evList.appendChild(fs);
+    return fs;
   }
-  $("btn-add-evidence").addEventListener("click", addEvidenceRow);
+  $("btn-add-evidence").addEventListener("click", function () {
+    var row = addEvidenceRow();
+    var first = row.querySelector("input");
+    if (first) first.focus();
+  });
   addEvidenceRow();
 
   function buildDocFromGuided() {
@@ -151,7 +212,7 @@
           desc = inp.desc.value.trim();
       if (!kind && !issuer && !desc) continue; // skip untouched rows
       if (!kind || !issuer || !desc)
-        return { error: "Evidence row " + (r + 1) + ": kind, issuer and description are all required (or remove the row)." };
+        return { error: "Evidence item " + (r + 1) + ": kind, issuer and description are all required (or remove the item)." };
       items.push({
         family: inp.family.value,
         item: {
@@ -182,8 +243,34 @@
   /* ---------- scoring entry points ---------- */
   var currentDoc = null, currentOut = null;
 
+  function setLoading(btn, on) {
+    if (on) {
+      if (btn.dataset.origLabel === undefined) btn.dataset.origLabel = btn.textContent;
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
+      btn.textContent = "Scoring\u2026";
+    } else {
+      btn.disabled = false;
+      btn.removeAttribute("aria-busy");
+      if (btn.dataset.origLabel !== undefined) btn.textContent = btn.dataset.origLabel;
+    }
+  }
+  // Run scoring on a timer so the loading state paints before the (synchronous)
+  // deterministic computation runs. The state is real: the button is disabled
+  // and announced busy until the verdict lands.
+  function scoreAsync(btn, buildFn) {
+    var built = buildFn();
+    if (built.error) { showError(built.error); return; }
+    setLoading(btn, true);
+    setTimeout(function () {
+      try { scoreDoc(built.doc); }
+      finally { setLoading(btn, false); }
+    }, 30);
+  }
+
   function scoreDoc(doc) {
     clearError();
+    $("determinism-out").hidden = true;
     var r;
     try {
       r = ENGINE.run(doc);
@@ -200,32 +287,34 @@
   }
 
   $("btn-score-guided").addEventListener("click", function () {
-    var built = buildDocFromGuided();
-    if (built.error) { showError(built.error); return; }
-    scoreDoc(built.doc);
+    scoreAsync(this, buildDocFromGuided);
   });
 
   $("btn-score-paste").addEventListener("click", function () {
-    var raw = $("f-json").value;
-    if (raw.length > PASTE_MAX) {
-      showError("Input is " + raw.length + " characters — the cap is " + PASTE_MAX + ". Trim it and try again.");
-      return;
-    }
-    var doc;
-    try { doc = JSON.parse(raw); }
-    catch (e) { showError("That isn't valid JSON: " + e.message); return; }
-    scoreDoc(doc);
+    var btn = this;
+    scoreAsync(btn, function () {
+      var raw = $("f-json").value;
+      if (!raw.trim()) return { error: "Paste the engine input JSON first." };
+      if (raw.length > PASTE_MAX)
+        return { error: "Input is " + raw.length + " characters — the cap is " + PASTE_MAX + ". Trim it and try again." };
+      try { return { doc: JSON.parse(raw) }; }
+      catch (e) { return { error: "That isn't valid JSON: " + e.message }; }
+    });
   });
 
   /* ---------- samples ---------- */
   (function buildSamples() {
     var grid = $("sample-grid");
-    Object.keys(window.CWI_SAMPLES || {}).forEach(function (key) {
+    if (!window.CWI_SAMPLES) {
+      grid.appendChild(el("p", "hint", "Samples failed to load (js/samples.js missing)."));
+      return;
+    }
+    Object.keys(window.CWI_SAMPLES).forEach(function (key) {
       var s = window.CWI_SAMPLES[key];
       var card = el("div", "sample-card");
       card.appendChild(el("h3", null, s.name));
       card.appendChild(el("p", null, s.desc));
-      var btn = el("button", "btn", "Load & score →");
+      var btn = el("button", "btn", "Load & score \u2192");
       btn.type = "button";
       btn.addEventListener("click", function () { scoreDoc(s.doc); });
       card.appendChild(btn);
@@ -236,8 +325,13 @@
   /* ---------- verdict card rendering ---------- */
   var STATUS_LABEL = {
     "scored": "SCORED", "insufficient-data": "INSUFFICIENT DATA",
-    "evidence-disputed": "EVIDENCE DISPUTED", "unknown-context": "UNKNOWN CONTEXT",
-    "invalid-input": "INVALID INPUT"
+    "evidence-disputed": "EVIDENCE DISPUTED", "unknown-context": "UNKNOWN CONTEXT"
+  };
+  var STATUS_HEADLINE = {
+    "scored": null,
+    "insufficient-data": "No score invented.",
+    "evidence-disputed": "Scoring is blocked.",
+    "unknown-context": "Unknown context."
   };
 
   function agentLabel(doc) {
@@ -245,34 +339,51 @@
     return dn ? dn + " (" + doc.subject.agent_id + ")" : doc.subject.agent_id;
   }
 
+  function verifiedTotals(out) {
+    var vt = 0, fc = 0;
+    Object.keys(out.families || {}).forEach(function (f) {
+      vt += out.families[f].verified_count;
+      if (out.families[f].verified_count > 0) fc++;
+    });
+    return { items: vt, families: fc };
+  }
+
   function renderResult(doc, out) {
     var card = $("verdict-card");
     card.textContent = "";
+    card.classList.remove("disputed", "thin");
+    if (out.status === "evidence-disputed") card.classList.add("disputed");
+    if (out.status === "insufficient-data") card.classList.add("thin");
 
     var eyebrow = el("div", "vc-eyebrow");
     var logo = document.createElement("img");
     logo.src = "assets/cwi-logo.jpg"; logo.alt = ""; logo.width = 26; logo.height = 26;
     eyebrow.appendChild(logo);
-    eyebrow.appendChild(el("span", null, "Cumulative Web Inc · Trust Verdict Checker"));
+    eyebrow.appendChild(el("span", null, "Cumulative Web Inc \u00b7 Trust Verdict Checker"));
     card.appendChild(eyebrow);
 
     card.appendChild(el("div", "vc-agent", agentLabel(doc)));
     var sub = el("div", "vc-sub");
-    sub.textContent = doc.subject.agent_id + " · context " + out.context +
-      " · observed " + String(out.observed_at).slice(0, 10);
+    sub.textContent = doc.subject.agent_id + " \u00b7 context " + out.context +
+      " \u00b7 observed " + String(out.observed_at).slice(0, 10);
     card.appendChild(sub);
 
     var pill = el("span", "vc-status " + out.status, STATUS_LABEL[out.status] || out.status);
+    pill.setAttribute("role", "status");
     card.appendChild(pill);
-    card.appendChild(el("br"));
+
+    var headline = STATUS_HEADLINE[out.status];
+    if (headline) card.appendChild(el("div", "vc-band", headline));
 
     if (out.status === "scored") {
       var sc = el("div");
       sc.appendChild(el("span", "vc-score-big", out.score.toFixed(3)));
       sc.appendChild(document.createTextNode("  "));
-      sc.appendChild(el("span", "vc-band", "“" + out.band + "”"));
+      sc.appendChild(el("span", "vc-band", "\u201c" + out.band + "\u201d"));
       card.appendChild(sc);
       var meter = el("div", "vc-meter");
+      meter.setAttribute("role", "img");
+      meter.setAttribute("aria-label", "Score " + out.score.toFixed(3) + " of 1, band " + out.band);
       var fill = el("div", "vc-meter-fill");
       fill.style.width = (out.score * 100).toFixed(1) + "%";
       meter.appendChild(fill);
@@ -288,34 +399,52 @@
       var box = el("div", "vc-missing");
       var title = out.status === "insufficient-data" ? "What's missing for a score" :
                   out.status === "evidence-disputed" ? "Why scoring is blocked" : "Problem";
-      box.appendChild(el("h4", null, title));
+      box.appendChild(el("h3", null, title));
       var ul = el("ul");
       out.missing.forEach(function (m) { ul.appendChild(el("li", null, m)); });
       box.appendChild(ul);
       card.appendChild(box);
+
+      if (out.status === "insufficient-data") {
+        var next = el("div", "vc-next");
+        next.appendChild(el("p", null,
+          "This is the honest outcome — the engine would rather say \u201cinsufficient data\u201d " +
+          "than invent a number. Only verified evidence counts: claimed, pending and refuted " +
+          "items contribute zero. Add verified attestations, completed work, or published " +
+          "verdicts with citable sources and check again."));
+        var again = el("button", "btn small gold-outline", "Add verified evidence");
+        again.type = "button";
+        again.addEventListener("click", function () { focusTab(0); safeScroll($("checker")); });
+        next.appendChild(again);
+        card.appendChild(next);
+      }
+      if (out.status === "evidence-disputed") {
+        card.appendChild(el("p", "vc-next",
+          "A disputed item means someone contests this evidence. Scoring refuses to proceed " +
+          "until the dispute is resolved — a score built on contested evidence would be a guess. " +
+          "Resolve the dispute with the issuer, then re-check."));
+      }
     }
 
     var meta = el("div", "vc-meta");
-    var vt = 0, fams = [];
-    Object.keys(out.families || {}).forEach(function (f) {
-      var fd = out.families[f];
-      vt += fd.verified_count;
-      if (fd.verified_count > 0) fams.push(f);
-    });
-    meta.appendChild(el("span", null, vt + " verified evidence items"));
-    meta.appendChild(el("span", null, fams.length + " families with verified evidence"));
-    meta.appendChild(el("span", null, "engine v" + out.engine_version + " · spec v" + out.spec_version));
+    var t = verifiedTotals(out);
+    meta.appendChild(el("span", null, t.items + " verified evidence items"));
+    meta.appendChild(el("span", null, t.families + " families with verified evidence"));
+    meta.appendChild(el("span", null, "engine v" + out.engine_version + " \u00b7 spec v" + out.spec_version));
     card.appendChild(meta);
 
-    card.appendChild(el("div", "vc-clause",
-      "🛡️ Honesty clause: this engine never invents a score. " +
-      "Thin evidence gets “insufficient data”, never a number. Same input → byte-identical output."));
+    var clause = el("div", "vc-clause");
+    clause.appendChild(el("strong", null, "\uD83D\uDEE1\uFE0F Honesty clause: "));
+    clause.appendChild(document.createTextNode(
+      "this engine never invents a score. Thin evidence gets \u201cinsufficient data\u201d, " +
+      "never a number. Same input \u2192 byte-identical output."));
+    card.appendChild(clause);
 
     renderBreakdown(doc, out);
     $("repro-hash").textContent = out.input_sha256 || "(none — invalid input)";
     var dump = $("input-dump");
     var pretty = JSON.stringify(doc, null, 2);
-    dump.textContent = pretty.length > 20000 ? pretty.slice(0, 20000) + "\n…(truncated)" : pretty;
+    dump.textContent = pretty.length > 20000 ? pretty.slice(0, 20000) + "\n\u2026(truncated)" : pretty;
     dump.hidden = true;
     $("btn-toggle-input").textContent = "Show input JSON";
 
@@ -335,9 +464,9 @@
       var fd = fams[fam];
       if (!fd) return;
       var block = el("div", "fam-block");
-      block.appendChild(el("h4", null, fam + " — " + fd.verified_count + " verified · " +
-        fd.kept_count + " kept · weight " + fd.kept_weight.toFixed(2) +
-        " · family score " + fd.family_score.toFixed(3)));
+      block.appendChild(el("h4", null, fam + " — " + fd.verified_count + " verified \u00b7 " +
+        fd.kept_count + " kept \u00b7 weight " + fd.kept_weight.toFixed(2) +
+        " \u00b7 family score " + fd.family_score.toFixed(3)));
       var items = (doc.signals && doc.signals[fam]) || [];
       if (items.length) {
         var table = el("table", "ev-table");
@@ -348,15 +477,15 @@
         table.appendChild(head);
         items.forEach(function (e) {
           var tr = el("tr");
-          var tdId = el("td", "mono", e.evidence_id);
-          var tdIss = el("td", null, e.issuer + " (" + e.issuer_type + ")");
+          tr.appendChild(el("td", "mono", e.evidence_id));
+          tr.appendChild(el("td", null, e.issuer + " (" + e.issuer_type + ")"));
           var tdSt = el("td");
           tdSt.appendChild(el("span", "badge " + e.status, e.status));
-          var tdW = el("td", null, "class " + e.weight_class);
+          tr.appendChild(tdSt);
+          tr.appendChild(el("td", null, "class " + e.weight_class));
           var tdD = el("td", null, String(e.description).slice(0, 90));
           tdD.title = String(e.description);
-          tr.appendChild(tdId); tr.appendChild(tdIss); tr.appendChild(tdSt);
-          tr.appendChild(tdW); tr.appendChild(tdD);
+          tr.appendChild(tdD);
           table.appendChild(tr);
         });
         block.appendChild(table);
@@ -364,14 +493,14 @@
         block.appendChild(el("p", "hint", "No evidence submitted in this family."));
       }
       (fd.not_counted || []).forEach(function (nc) {
-        block.appendChild(el("p", "hint", "⊘ " + nc.evidence_id + " — " + nc.reason + "."));
+        block.appendChild(el("p", "hint", "\u2298 " + nc.evidence_id + " — " + nc.reason + "."));
       });
       (fd.damped || []).forEach(function (d) {
-        block.appendChild(el("p", "hint", "⇄ " + d.evidence_id + " — damped: " + d.detail + "."));
+        block.appendChild(el("p", "hint", "\u21C4 " + d.evidence_id + " — damped: " + d.detail + "."));
       });
       if ((fd.self_assertion_discounted || []).length)
         block.appendChild(el("p", "hint",
-          "½ self-assertion discount applied to: " + fd.self_assertion_discounted.join(", ") + "."));
+          "\u00BD self-assertion discount applied to: " + fd.self_assertion_discounted.join(", ") + "."));
       host.appendChild(block);
     });
   }
@@ -383,28 +512,21 @@
   });
 
   /* ---------- share actions ---------- */
-  function pageUrl() { return location.href.split("#")[0]; }
-
   function verdictText() {
     if (!currentDoc || !currentOut) return "";
     var out = currentOut, doc = currentDoc;
-    var lines = ["🛡️ Trust verdict — " + agentLabel(doc)];
+    var lines = ["\uD83D\uDEE1\uFE0F Trust verdict — " + agentLabel(doc)];
     if (out.status === "scored") {
-      var vt = 0, fc = 0;
-      Object.keys(out.families).forEach(function (f) {
-        vt += out.families[f].verified_count;
-        if (out.families[f].verified_count > 0) fc++;
-      });
-      lines.push("Status: SCORED · score " + out.score.toFixed(3) + " · band “" + out.band + "”");
-      lines.push("Context: " + out.context + " · " + vt + " verified evidence items across " + fc + " families");
+      var t = verifiedTotals(out);
+      lines.push("Status: SCORED \u00b7 score " + out.score.toFixed(3) + " \u00b7 band \u201c" + out.band + "\u201d");
+      lines.push("Context: " + out.context + " \u00b7 " + t.items + " verified evidence items across " + t.families + " families");
     } else {
       lines.push("Status: " + (STATUS_LABEL[out.status] || out.status));
       (out.missing || []).slice(0, 3).forEach(function (m) { lines.push("- " + m); });
     }
     lines.push("Honesty clause: the engine never invents a score.");
     lines.push("input_sha256: " + out.input_sha256);
-    lines.push("Check any agent: " + pageUrl());
-    lines.push("— Cumulative Web Inc · cumulativeweb.com");
+    lines.push("— Cumulative Web Inc \u00b7 cumulativeweb.com");
     return lines.join("\n");
   }
 
@@ -423,6 +545,11 @@
     }
   }
 
+  function b64urlEncode(str) {
+    var b64 = btoa(unescape(encodeURIComponent(str)));
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
   $("btn-copy-text").addEventListener("click", function () {
     if (!currentOut) return;
     copyText(verdictText(), "Verdict text copied.");
@@ -435,21 +562,55 @@
     if (!currentDoc) return;
     var json = JSON.stringify(currentDoc);
     if (json.length > LINK_MAX) {
-      copyText(pageUrl(), "Input too large for a share link — page URL copied instead.");
+      $("share-hint").textContent = "Input exceeds the 50 KB share-link cap.";
       return;
     }
-    var b64 = btoa(unescape(encodeURIComponent(json)))
-      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    copyText(pageUrl() + "#v=" + b64, "Share link copied.");
+    var url = location.href.split("#")[0] + "#v=" + b64urlEncode(json);
+    copyText(url, "Share link copied.");
+  });
+
+  /* ---------- verify determinism: run twice more, compare bytes ---------- */
+  $("btn-verify-determinism").addEventListener("click", function () {
+    var out = $("determinism-out");
+    out.hidden = false;
+    out.classList.remove("fail");
+    out.textContent = "";
+    if (!currentDoc || !currentOut) {
+      out.textContent = "Score something first, then verify.";
+      return;
+    }
+    try {
+      var r1 = ENGINE.run(currentDoc);
+      var r2 = ENGINE.run(currentDoc);
+      var s0 = ENGINE.canonicalStringify(currentOut);
+      var s1 = ENGINE.canonicalStringify(r1[0]);
+      var s2 = ENGINE.canonicalStringify(r2[0]);
+      var ok = r1[1] === 0 && r2[1] === 0 && s0 === s1 && s1 === s2 &&
+               r1[0].input_sha256 === currentOut.input_sha256;
+      if (ok) {
+        out.appendChild(el("strong", null, "\u2713 Deterministic — "));
+        out.appendChild(document.createTextNode(
+          "3 runs on this input produced byte-identical output. input_sha256 " +
+          String(currentOut.input_sha256).slice(0, 24) + "\u2026"));
+      } else {
+        out.classList.add("fail");
+        out.appendChild(el("strong", null, "\u2717 Mismatch — "));
+        out.appendChild(document.createTextNode(
+          "two re-runs did not reproduce the verdict byte-for-byte. Do not trust this result; report it."));
+      }
+    } catch (e) {
+      out.classList.add("fail");
+      out.textContent = "Verification failed: " + e.message;
+    }
   });
 
   /* ---------- verdict card PNG (canvas, fillText only) ---------- */
   function fitText(ctx, text, maxW) {
     text = String(text);
     if (ctx.measureText(text).width <= maxW) return text;
-    while (text.length > 1 && ctx.measureText(text + "…").width > maxW)
+    while (text.length > 1 && ctx.measureText(text + "\u2026").width > maxW)
       text = text.slice(0, -1);
-    return text + "…";
+    return text + "\u2026";
   }
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -472,12 +633,14 @@
       cv.width = W; cv.height = H;
       var ctx = cv.getContext("2d");
       if (!ctx) { $("share-hint").textContent = "Card PNG isn't supported in this browser."; return; }
-      ctx.fillStyle = "#0b0d12"; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#0a0a0b"; ctx.fillRect(0, 0, W, H);
+      // gold ring, then white card
+      ctx.fillStyle = "#d9ab2e";
+      roundRect(ctx, 30, 30, W - 60, H - 60, 30); ctx.fill();
       ctx.fillStyle = "#ffffff";
-      roundRect(ctx, 36, 36, W - 72, H - 72, 28); ctx.fill();
+      roundRect(ctx, 38, 38, W - 76, H - 76, 24); ctx.fill();
 
       var x = 96, y = 116;
-      // logo, circle-clipped (skipped on taint-retry)
       if (!noLogo) {
         try {
           ctx.save();
@@ -486,54 +649,53 @@
           ctx.restore();
         } catch (e) { /* logo optional on canvas */ }
       }
-      ctx.fillStyle = "#6b7280"; ctx.font = "600 24px system-ui, sans-serif";
-      ctx.fillText("CUMULATIVE WEB INC · TRUST VERDICT CHECKER", x + 84, y);
+      ctx.fillStyle = "#8a6707"; ctx.font = "600 24px system-ui, sans-serif";
+      ctx.fillText("CUMULATIVE WEB INC \u00b7 TRUST VERDICT CHECKER", x + 84, y);
 
       var out = currentOut, doc = currentDoc;
-      y = 210;
-      ctx.fillStyle = "#11141a"; ctx.font = "800 56px system-ui, sans-serif";
+      y = 208;
+      ctx.fillStyle = "#141416"; ctx.font = "800 56px system-ui, sans-serif";
       ctx.fillText(fitText(ctx, agentLabel(doc), 1000), x, y);
       y += 44;
       ctx.fillStyle = "#4b5563"; ctx.font = "400 27px system-ui, sans-serif";
-      ctx.fillText(fitText(ctx, doc.subject.agent_id + " · context " + out.context, 1000), x, y);
+      ctx.fillText(fitText(ctx, doc.subject.agent_id + " \u00b7 context " + out.context, 1000), x, y);
 
       y += 66;
-      var colors = { "scored": "#16a34a", "insufficient-data": "#d97706",
-                     "evidence-disputed": "#dc2626", "unknown-context": "#6b7280",
-                     "invalid-input": "#6b7280" };
+      var colors = { "scored": "#15803d", "insufficient-data": "#b45309",
+                     "evidence-disputed": "#b91c1c", "unknown-context": "#4b5563" };
       var label = STATUS_LABEL[out.status] || out.status;
       ctx.font = "800 30px system-ui, sans-serif";
       var pw = ctx.measureText(label).width + 56;
-      ctx.fillStyle = colors[out.status] || "#6b7280";
+      ctx.fillStyle = colors[out.status] || "#4b5563";
       roundRect(ctx, x, y - 40, pw, 58, 29); ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.fillText(label, x + 28, y);
 
       y += 66;
       if (out.status === "scored") {
-        ctx.fillStyle = "#11141a"; ctx.font = "800 110px system-ui, sans-serif";
+        ctx.fillStyle = "#141416"; ctx.font = "800 110px system-ui, sans-serif";
         ctx.fillText(out.score.toFixed(3), x, y);
         ctx.font = "700 44px system-ui, sans-serif"; ctx.fillStyle = "#374151";
-        ctx.fillText("“" + out.band + "”", x + 330, y - 8);
+        ctx.fillText("\u201c" + out.band + "\u201d", x + 330, y - 8);
         y += 30;
-        ctx.fillStyle = "#e5e7eb";
+        ctx.fillStyle = "#e9e4d6";
         roundRect(ctx, x, y, 1008, 18, 9); ctx.fill();
-        ctx.fillStyle = "#16a34a";
+        ctx.fillStyle = "#d9ab2e";
         roundRect(ctx, x, y, Math.max(18, 1008 * out.score), 18, 9); ctx.fill();
       } else {
         ctx.fillStyle = "#374151"; ctx.font = "400 27px system-ui, sans-serif";
         (out.missing || []).slice(0, 3).forEach(function (m) {
-          ctx.fillText("• " + fitText(ctx, m, 1000), x, y);
+          ctx.fillText("\u2022 " + fitText(ctx, m, 1000), x, y);
           y += 40;
         });
       }
 
       y = H - 130;
       ctx.fillStyle = "#6b7280"; ctx.font = "400 23px system-ui, sans-serif";
-      ctx.fillText("🛡️ Honesty clause: this engine never invents a score.", x, y);
+      ctx.fillText("\uD83D\uDEE1\uFE0F Honesty clause: this engine never invents a score.", x, y);
       y += 36;
-      ctx.fillText("cumulativeweb.com   ·   input_sha256 " +
-        String(out.input_sha256).slice(0, 24) + "…", x, y);
+      ctx.fillText("cumulativeweb.com   \u00b7   input_sha256 " +
+        String(out.input_sha256).slice(0, 24) + "\u2026", x, y);
 
       var a = document.createElement("a");
       a.download = "trust-verdict-" + doc.subject.agent_id.replace(/[^a-zA-Z0-9_-]/g, "_") + ".png";
@@ -565,11 +727,4 @@
       showError("That share link couldn't be read: " + e.message);
     }
   })();
-
-  /* include samples script dependency guard */
-  if (!window.CWI_SAMPLES) {
-    var sg = $("sample-grid");
-    sg.textContent = "";
-    sg.appendChild(el("p", "hint", "Samples failed to load (js/samples.js missing)."));
-  }
 })();
