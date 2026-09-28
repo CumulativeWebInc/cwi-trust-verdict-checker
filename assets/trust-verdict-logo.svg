@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Trust Verdict Checker seal">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7E08B"/><stop offset="0.55" stop-color="#E3C057"/><stop offset="1" stop-color="#B8860B"/></linearGradient></defs>
+<rect width="512" height="512" fill="#0A0A0A"/>
+<circle cx="256" cy="256" r="238" fill="none" stroke="url(#gold)" stroke-width="7"/>
+<circle cx="256" cy="256" r="226" fill="none" stroke="url(#gold)" stroke-width="2.5"/>
+<circle cx="256" cy="256" r="206" fill="none" stroke="url(#gold)" stroke-width="3"/>
+<line x1="440.0" y1="256.0" x2="446.0" y2="256.0" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
+<line x1="433.7" y1="303.6" x2="445.3" y2="306.7" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="415.3" y1="348.0" x2="425.7" y2="354.0" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="386.1" y1="386.1" x2="394.6" y2="394.6" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="348.0" y1="415.3" x2="354.0" y2="425.7" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="303.6" y1="433.7" x2="306.7" y2="445.3" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="256.0" y1="440.0" x2="256.0" y2="446.0" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
+<line x1="208.4" y1="433.7" x2="205.3" y2="445.3" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="164.0" y1="415.3" x2="158.0" y2="425.7" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="125.9" y1="386.1" x2="117.4" y2="394.6" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="96.7" y1="348.0" x2="86.3" y2="354.0" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="78.3" y1="303.6" x2="66.7" y2="306.7" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="72.0" y1="256.0" x2="66.0" y2="256.0" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
+<line x1="78.3" y1="208.4" x2="66.7" y2="205.3" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="96.7" y1="164.0" x2="86.3" y2="158.0" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="125.9" y1="125.9" x2="117.4" y2="117.4" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="164.0" y1="96.7" x2="158.0" y2="86.3" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="208.4" y1="78.3" x2="205.3" y2="66.7" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="256.0" y1="72.0" x2="256.0" y2="66.0" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
+<line x1="303.6" y1="78.3" x2="306.7" y2="66.7" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="348.0" y1="96.7" x2="354.0" y2="86.3" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="386.1" y1="125.9" x2="394.6" y2="117.4" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="415.3" y1="164.0" x2="425.7" y2="158.0" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="433.7" y1="208.4" x2="445.3" y2="205.3" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round"/>
+<polyline points="168,268 236,336 366,178" fill="none" stroke="url(#gold)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="150" y="368" width="212" height="14" rx="7" fill="url(#gold)"/>
+<polygon points="138,364 149,375 138,386 127,375" fill="url(#gold)"/>
+<polygon points="374,364 385,375 374,386 363,375" fill="url(#gold)"/>
+</svg>
