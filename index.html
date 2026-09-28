@@ -4,116 +4,146 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Who vouches for your agent? — CWI Trust Verdict Checker</title>
-<meta name="description" content="Paste an AI agent's evidence. Get a deterministic trust verdict — or an honest 'insufficient data'. The engine never invents a score.">
+<meta name="description" content="Paste an AI agent's evidence. Get a deterministic trust verdict — a score with its evidence, or an honest 'insufficient data'. The engine never invents a score.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <link rel="icon" type="image/jpeg" href="assets/cwi-logo.jpg">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<a class="skip" href="#checker">Skip to the checker</a>
+
 <header class="site-header">
   <div class="wrap header-inner">
-    <img class="brand-logo" src="assets/cwi-logo.jpg" alt="Cumulative Web Inc logo" width="44" height="44">
+    <img class="brand-logo" src="assets/cwi-logo.jpg" alt="Cumulative Web Inc logo" width="44" height="44" fetchpriority="high">
+    <!-- Product logo: staged mark from the logo worker (trust-verdict-suite/brand/). -->
+    <img id="product-logo" class="product-logo" src="assets/trust-verdict-logo.svg" alt="Trust Verdict Checker logo" width="44" height="44" fetchpriority="high">
     <div class="brand-text">
       <span class="eyebrow">Cumulative Web Inc</span>
       <span class="product">Trust Verdict Checker</span>
     </div>
+    <nav class="site-nav" aria-label="Site">
+      <a href="#checker">Checker</a>
+      <a href="#how">How it works</a>
+      <a href="/api">API docs <span class="soon">soon</span></a>
+    </nav>
   </div>
 </header>
 
-<main class="wrap">
-  <section class="hero">
-    <h1>Who vouches for your agent?</h1>
-    <p class="lede">Paste an agent&rsquo;s evidence &mdash; identity registrations, attestations,
-      completed work, published verdicts &mdash; and get a <strong>deterministic trust
-      verdict</strong>: a score with its evidence, or an honest
-      <strong>&ldquo;insufficient data&rdquo;</strong>.</p>
-    <p class="honesty-chip">🛡️ Honesty clause: this engine never invents a score. Thin evidence
-      gets &ldquo;insufficient data&rdquo;, never a number.</p>
+<main id="main" class="wrap">
+  <section class="hero" aria-labelledby="hero-h">
+    <p class="eyebrow gold">CWI Verdict Engine v1.0.0 &middot; deterministic &middot; evidence-bound</p>
+    <h1 id="hero-h">Who vouches for your agent?</h1>
+    <p class="lede">Bring an agent&rsquo;s evidence &mdash; identity registrations, attestations,
+      completed work, published verdicts &mdash; and get a
+      <strong>deterministic trust verdict</strong>: a score backed by its evidence,
+      or an honest <strong>&ldquo;insufficient data&rdquo;</strong>.</p>
+    <p class="honesty"><strong>The engine never invents a score.</strong>
+      Thin evidence gets &ldquo;insufficient data&rdquo;, never a number.
+      Scoring runs entirely in your browser &mdash; nothing you paste is uploaded anywhere.</p>
   </section>
 
-  <nav class="tabs" role="tablist" aria-label="Input methods">
-    <button class="tab active" id="tab-guided" role="tab" aria-selected="true" aria-controls="panel-guided">Guided form</button>
-    <button class="tab" id="tab-paste" role="tab" aria-selected="false" aria-controls="panel-paste">Paste JSON</button>
-    <button class="tab" id="tab-samples" role="tab" aria-selected="false" aria-controls="panel-samples">Try a sample</button>
-  </nav>
+  <section id="checker" aria-labelledby="checker-h">
+    <h2 id="checker-h">Check an agent</h2>
+    <p class="hint live-path"><strong>Live verdict path:</strong> scoring runs entirely in your
+      browser on the parity-tested JavaScript port of <span class="mono">engine.py</span>
+      (<span class="mono">tests/parity.mjs</span> requires byte-identical outputs) &mdash; the real
+      deterministic computation, not a simulation. No server call, nothing stubbed.</p>
 
-  <section class="panel active" id="panel-guided" role="tabpanel" aria-labelledby="tab-guided">
-    <div class="field-grid">
-      <label class="field">Agent ID <span class="req">*</span>
-        <input type="text" id="f-agent-id" maxlength="120" placeholder="e.g. agent_aegis" autocomplete="off">
-      </label>
-      <label class="field">Display name
-        <input type="text" id="f-display" maxlength="120" placeholder="e.g. Aegis" autocomplete="off">
-      </label>
-      <label class="field">Trust context <span class="req">*</span>
-        <select id="f-context"></select>
-        <span class="hint" id="context-hint"></span>
-      </label>
+    <div class="tabs" role="tablist" aria-label="Input methods">
+      <button type="button" class="tab active" id="tab-guided" role="tab" aria-selected="true" aria-controls="panel-guided" tabindex="0">Guided form</button>
+      <button type="button" class="tab" id="tab-paste" role="tab" aria-selected="false" aria-controls="panel-paste" tabindex="-1">Paste JSON</button>
+      <button type="button" class="tab" id="tab-samples" role="tab" aria-selected="false" aria-controls="panel-samples" tabindex="-1">Try a sample</button>
     </div>
 
-    <h2>Evidence <span class="muted-sm">— every item needs a citable source in the real world; here, describe it honestly</span></h2>
-    <div id="evidence-list"></div>
-    <button class="btn ghost" id="btn-add-evidence" type="button">+ Add evidence</button>
-    <div class="actions">
-      <button class="btn primary" id="btn-score-guided" type="button">Check trust →</button>
-    </div>
-  </section>
+    <section class="panel active" id="panel-guided" role="tabpanel" aria-labelledby="tab-guided" tabindex="0">
+      <fieldset class="id-fieldset">
+        <legend>Agent identity</legend>
+        <div class="field-grid">
+          <div class="field">
+            <label for="f-agent-id">Agent ID <span class="req" aria-hidden="true">*</span><span class="visually-hidden">(required)</span></label>
+            <input type="text" id="f-agent-id" maxlength="120" placeholder="e.g. agent_aegis" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f-display">Display name</label>
+            <input type="text" id="f-display" maxlength="120" placeholder="e.g. Aegis" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f-context">Trust context <span class="req" aria-hidden="true">*</span><span class="visually-hidden">(required)</span></label>
+            <select id="f-context" aria-describedby="context-hint"></select>
+            <p class="hint" id="context-hint"></p>
+          </div>
+        </div>
+      </fieldset>
 
-  <section class="panel" id="panel-paste" role="tabpanel" aria-labelledby="tab-paste" hidden>
-    <label class="field">Verdict-engine input JSON <span class="req">*</span>
-      <textarea id="f-json" rows="14" maxlength="200000" spellcheck="false"
-        placeholder='{"engine_version":"1.0.0","subject":{"agent_id":"agent_aegis"},"context":"agent-trust","observed_at":"2026-09-25T09:30:00Z","signals":{"erc8004":[],"needle_drop":[],"first_spin":[]}}'></textarea>
-    </label>
-    <p class="hint">Schema: <span class="mono">trust/spec.md §3</span> (cwi-learn repo) — three signal
-      families (<span class="mono">erc8004</span>, <span class="mono">needle_drop</span>,
-      <span class="mono">first_spin</span>), each a list of evidence items with
-      <span class="mono">evidence_id</span>, <span class="mono">kind</span>,
-      <span class="mono">issuer</span>, <span class="mono">issuer_type</span>
-      (<span class="mono">self</span>|<span class="mono">third_party</span>|<span class="mono">protocol</span>),
-      <span class="mono">status</span>, <span class="mono">weight_class</span> (1–3),
-      <span class="mono">description</span>, <span class="mono">observed_at</span>.
-      Max 200&nbsp;KB. Nothing you paste is uploaded anywhere — scoring runs in your browser.</p>
-    <div class="actions">
-      <button class="btn primary" id="btn-score-paste" type="button">Check trust →</button>
-    </div>
-  </section>
-
-  <section class="panel" id="panel-samples" role="tabpanel" aria-labelledby="tab-samples" hidden>
-    <p class="hint">Three worked examples. One scores, one is honestly thin, one is disputed.</p>
-    <div class="sample-grid" id="sample-grid"></div>
-  </section>
-
-  <div class="error-box" id="error-box" hidden></div>
-
-  <section id="result" hidden>
-    <h2>Verdict</h2>
-    <article class="verdict-card" id="verdict-card" aria-live="polite"></article>
-    <div class="share-row">
-      <button class="btn" id="btn-copy-text" type="button">Copy verdict text</button>
-      <button class="btn" id="btn-card-png" type="button">Download card PNG</button>
-      <button class="btn" id="btn-copy-link" type="button">Copy share link</button>
-      <span class="hint" id="share-hint" role="status"></span>
-    </div>
-    <details class="evidence-details">
-      <summary>Evidence breakdown</summary>
-      <div id="evidence-breakdown"></div>
-    </details>
-    <details class="evidence-details">
-      <summary>Reproduce this verdict</summary>
-      <p class="hint">Run <span class="mono">cwi-verdict-engine v1.0.0</span> (spec v1.0.0,
-        <span class="mono">trust/</span> in the <span class="mono">cwi-learn</span> repo) on the
-        input below. Same input → byte-identical output, guaranteed.</p>
-      <div class="hash-row">
-        <span class="mono hash" id="repro-hash"></span>
-        <button class="btn small" id="btn-copy-hash" type="button">Copy hash</button>
+      <h3 class="ev-heading">Evidence</h3>
+      <p class="hint">Every item needs a citable source in the real world. Describe each one honestly &mdash;
+        only <strong>verified</strong> items count toward a score; <strong>disputed</strong> items block scoring until resolved.</p>
+      <div id="evidence-list"></div>
+      <button class="btn ghost" id="btn-add-evidence" type="button">+ Add evidence</button>
+      <div class="actions">
+        <button class="btn primary" id="btn-score-guided" type="button">Check trust &rarr;</button>
       </div>
-      <button class="btn small ghost" id="btn-toggle-input" type="button">Show input JSON</button>
-      <pre class="mono input-dump" id="input-dump" hidden></pre>
-    </details>
+    </section>
+
+    <section class="panel" id="panel-paste" role="tabpanel" aria-labelledby="tab-paste" tabindex="0" hidden>
+      <div class="field">
+        <label for="f-json">Verdict-engine input JSON <span class="req" aria-hidden="true">*</span><span class="visually-hidden">(required)</span></label>
+        <textarea id="f-json" rows="12" maxlength="200000" spellcheck="false"
+          placeholder='{"engine_version":"1.0.0","subject":{"agent_id":"agent_aegis"},"context":"agent-trust","observed_at":"2026-09-25T09:30:00Z","signals":{"erc8004":[],"needle_drop":[],"first_spin":[]}}'></textarea>
+      </div>
+      <p class="hint">Schema: <span class="mono">trust/spec.md &sect;3</span> (cwi-learn repo) &mdash; three signal
+        families (<span class="mono">erc8004</span>, <span class="mono">needle_drop</span>,
+        <span class="mono">first_spin</span>), each a list of evidence items with
+        <span class="mono">evidence_id</span>, <span class="mono">kind</span>,
+        <span class="mono">issuer</span>, <span class="mono">issuer_type</span>
+        (<span class="mono">self</span>|<span class="mono">third_party</span>|<span class="mono">protocol</span>),
+        <span class="mono">status</span>, <span class="mono">weight_class</span> (1&ndash;3),
+        <span class="mono">description</span>, <span class="mono">observed_at</span>.
+        Max 200&nbsp;KB. Nothing you paste is uploaded anywhere &mdash; scoring runs in your browser.</p>
+      <div class="actions">
+        <button class="btn primary" id="btn-score-paste" type="button">Check trust &rarr;</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-samples" role="tabpanel" aria-labelledby="tab-samples" tabindex="0" hidden>
+      <p class="hint">Three worked examples from the 20-case gate corpus. One scores, one is honestly thin, one is disputed.</p>
+      <div class="sample-grid" id="sample-grid"></div>
+    </section>
+
+    <div class="error-box" id="error-box" role="alert" hidden></div>
+
+    <section id="result" aria-labelledby="result-h" hidden>
+      <h2 id="result-h">Verdict</h2>
+      <article class="verdict-card" id="verdict-card" aria-live="polite"></article>
+      <div class="share-row">
+        <button class="btn" id="btn-copy-text" type="button">Copy verdict text</button>
+        <button class="btn" id="btn-copy-link" type="button">Copy share link</button>
+        <button class="btn" id="btn-card-png" type="button">Download card PNG</button>
+        <button class="btn gold-outline" id="btn-verify-determinism" type="button">Verify determinism</button>
+        <span class="hint" id="share-hint" role="status"></span>
+      </div>
+      <p class="hint determinism-out" id="determinism-out" role="status" hidden></p>
+      <details class="evidence-details">
+        <summary>Evidence breakdown</summary>
+        <div id="evidence-breakdown"></div>
+      </details>
+      <details class="evidence-details">
+        <summary>Reproduce this verdict</summary>
+        <p class="hint">Run <span class="mono">cwi-verdict-engine v1.0.0</span> (spec v1.0.0,
+          <span class="mono">trust/</span> in the <span class="mono">cwi-learn</span> repo) on the
+          input below. Same input &rarr; byte-identical output, guaranteed.</p>
+        <div class="hash-row">
+          <span class="mono hash" id="repro-hash"></span>
+          <button class="btn small" id="btn-copy-hash" type="button">Copy hash</button>
+        </div>
+        <button class="btn small ghost" id="btn-toggle-input" type="button">Show input JSON</button>
+        <pre class="mono input-dump" id="input-dump" hidden></pre>
+      </details>
+    </section>
   </section>
 
-  <section class="how">
-    <h2>How scoring works</h2>
+  <section class="how" id="how" aria-labelledby="how-h">
+    <h2 id="how-h">How scoring works</h2>
     <ol>
       <li><strong>Only verified evidence counts.</strong> <span class="mono">claimed</span>,
         <span class="mono">pending</span> and <span class="mono">refuted</span> items contribute zero;
@@ -121,27 +151,35 @@
       <li><strong>Self-assertion is discounted.</strong> Evidence an agent issues about itself
         counts half; third-party and protocol-sealed evidence counts full.</li>
       <li><strong>Sybil damping.</strong> At most 2 verified items per identity cluster count
-        per family — ten sock-puppet attestations don&rsquo;t beat one real one.</li>
+        per family &mdash; ten sock-puppet attestations don&rsquo;t beat one real one.</li>
       <li><strong>Context gates.</strong> Each context demands minimum verified evidence
         (e.g. <span class="mono">agent-trust</span> needs 3+ verified items across 2+ families,
-        including ERC-8004 identity). Miss the gate → <strong>insufficient data</strong>, with
+        including ERC-8004 identity). Miss the gate &rarr; <strong>insufficient data</strong>, with
         the exact shortfall listed.</li>
     </ol>
-    <p class="hint">Published rules, spec-versioned — weights and thresholds change only with a
-      spec bump, never ad hoc. Bands: established ≥0.80 · emerging ≥0.60 · thin ≥0.40 ·
-      weak ≥0.20 · negligible below.</p>
+    <p class="hint">Published rules, spec-versioned &mdash; weights and thresholds change only with a
+      spec bump, never ad hoc. Bands: established &ge;0.80 &middot; emerging &ge;0.60 &middot; thin &ge;0.40 &middot;
+      weak &ge;0.20 &middot; negligible below.</p>
+  </section>
+
+  <section class="api-slot" aria-labelledby="api-h">
+    <h2 id="api-h">Need verdicts at machine scale?</h2>
+    <p>The free checker is the top of the funnel. Agents and apps can buy verdicts one at a time
+      through the <strong>x402 pay-per-verdict API</strong> &mdash; same deterministic engine,
+      priced per call. Full docs are on the way.</p>
+    <p><a class="btn gold-outline" href="/api">API docs <span class="soon">soon</span></a></p>
   </section>
 </main>
 
 <footer class="site-footer">
   <div class="wrap footer-inner">
-    <span>CWI Verdict Engine v1.0.0 · spec v1.0.0</span>
-    <span>Built by <strong>Cumulative Web Inc</strong> · <span class="mono">cumulativeweb.com</span></span>
+    <span>CWI Verdict Engine v1.0.0 &middot; spec v1.0.0</span>
+    <span>Built by <strong>Cumulative Web Inc</strong> &middot; <span class="mono">cumulativeweb.com</span></span>
   </div>
 </footer>
 
-<script src="js/verdict-engine.js"></script>
-<script src="js/samples.js"></script>
-<script src="js/app.js"></script>
+<script src="js/verdict-engine.js" defer></script>
+<script src="js/samples.js" defer></script>
+<script src="js/app.js" defer></script>
 </body>
 </html>
