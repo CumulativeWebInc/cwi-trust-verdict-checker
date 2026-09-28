@@ -1,0 +1,163 @@
+/* CWI Trust Verdict Checker — dark theme, white verdict card */
+:root {
+  --bg: #0b0d12;
+  --panel: #12151c;
+  --panel-2: #171b24;
+  --line: #242a36;
+  --ink: #e8eaf0;
+  --muted: #9aa1b2;
+  --accent: #5b6cff;
+  --accent-ink: #ffffff;
+  --good: #16a34a;
+  --warn: #d97706;
+  --bad: #dc2626;
+  --card: #ffffff;
+  --card-ink: #11141a;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.55;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+.muted-sm { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+
+/* header */
+.site-header { border-bottom: 1px solid var(--line); background: #0d1017; }
+.header-inner { display: flex; align-items: center; gap: 12px; padding: 14px 20px; }
+.brand-logo { border-radius: 50%; display: block; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+.eyebrow { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.product { font-weight: 700; font-size: 1.02rem; }
+
+/* hero */
+.hero { padding: 40px 0 8px; }
+.hero h1 { font-size: 2.1rem; margin: 0 0 10px; letter-spacing: -0.01em; }
+.lede { font-size: 1.08rem; color: var(--ink); max-width: 640px; }
+.honesty-chip {
+  display: inline-block; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: 8px 16px; font-size: 0.92rem; color: var(--ink);
+}
+
+/* tabs */
+.tabs { display: flex; gap: 8px; margin: 26px 0 0; border-bottom: 1px solid var(--line); }
+.tab {
+  background: none; border: none; color: var(--muted); font-size: 1rem; font-weight: 600;
+  padding: 10px 16px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--ink); }
+.panel { display: none; padding: 22px 0; }
+.panel.active { display: block; }
+
+/* form */
+.field-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 8px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 0.92rem; }
+.req { color: var(--warn); }
+input[type="text"], select, textarea {
+  background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+  border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+.hint { color: var(--muted); font-size: 0.86rem; font-weight: 400; }
+textarea { resize: vertical; min-height: 220px; }
+
+.ev-row {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; margin: 12px 0; display: grid; gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+.ev-row .field { font-size: 0.85rem; }
+.ev-row .span2 { grid-column: span 2; }
+.ev-remove { justify-self: end; grid-column: span 2; }
+
+.btn {
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-size: 1.02rem; padding: 12px 26px; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 6px 12px; font-size: 0.85rem; }
+.actions { margin-top: 18px; }
+
+/* samples */
+.sample-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.sample-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.sample-card h3 { margin: 0; font-size: 1.02rem; }
+.sample-card p { margin: 0; color: var(--muted); font-size: 0.88rem; flex: 1; }
+
+/* error */
+.error-box {
+  background: #2a1414; border: 1px solid var(--bad); color: #fecaca;
+  border-radius: var(--radius); padding: 14px 16px; margin: 16px 0; font-size: 0.95rem;
+}
+
+/* verdict card — white card on dark, per the CWI ad formula */
+.verdict-card {
+  background: var(--card); color: var(--card-ink); border-radius: 18px;
+  padding: 26px 28px; margin: 14px 0 18px; box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.vc-eyebrow { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: #6b7280; display: flex; align-items: center; gap: 8px; }
+.vc-eyebrow img { border-radius: 50%; }
+.vc-agent { font-size: 1.5rem; font-weight: 800; margin: 8px 0 2px; letter-spacing: -0.01em; }
+.vc-sub { color: #4b5563; font-size: 0.92rem; margin-bottom: 14px; }
+.vc-status {
+  display: inline-block; font-weight: 800; font-size: 1.05rem; border-radius: 999px;
+  padding: 8px 18px; margin-bottom: 12px; color: #fff;
+}
+.vc-status.scored { background: var(--good); }
+.vc-status.insufficient-data { background: var(--warn); }
+.vc-status.evidence-disputed { background: var(--bad); }
+.vc-status.invalid-input, .vc-status.unknown-context { background: #6b7280; }
+.vc-score-big { font-size: 2.6rem; font-weight: 800; line-height: 1; }
+.vc-band { font-size: 1.15rem; font-weight: 700; color: #374151; }
+.vc-meter { height: 10px; background: #e5e7eb; border-radius: 999px; margin: 12px 0 4px; position: relative; overflow: hidden; }
+.vc-meter-fill { height: 100%; background: var(--good); border-radius: 999px; }
+.vc-meter-ticks { display: flex; justify-content: space-between; font-size: 0.72rem; color: #6b7280; }
+.vc-missing { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
+.vc-missing h4 { margin: 0 0 6px; font-size: 0.92rem; }
+.vc-missing ul { margin: 0; padding-left: 20px; font-size: 0.9rem; }
+.vc-meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; font-size: 0.85rem; color: #4b5563; }
+.vc-clause { margin-top: 14px; font-size: 0.85rem; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+
+.share-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; }
+
+.evidence-details { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+.evidence-details summary { cursor: pointer; font-weight: 700; }
+.fam-block { margin: 14px 0; }
+.fam-block h4 { margin: 0 0 8px; }
+.ev-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.ev-table th, .ev-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ev-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.badge { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 700; }
+.badge.verified { background: #dcfce7; color: #166534; }
+.badge.claimed, .badge.pending { background: #fef3c7; color: #92400e; }
+.badge.disputed { background: #fee2e2; color: #991b1b; }
+.badge.refuted { background: #f3f4f6; color: #4b5563; }
+.hash-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+.hash { word-break: break-all; font-size: 0.8rem; color: var(--muted); }
+.input-dump { background: #0d1017; border: 1px solid var(--line); border-radius: 10px; padding: 14px; overflow: auto; max-height: 320px; font-size: 0.8rem; }
+
+.how { margin: 40px 0; }
+.how h2, #result h2 { font-size: 1.35rem; }
+.how ol { padding-left: 22px; }
+.how li { margin-bottom: 10px; }
+
+.site-footer { border-top: 1px solid var(--line); margin-top: 30px; }
+.footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 18px 20px; color: var(--muted); font-size: 0.86rem; }
+
+@media (max-width: 640px) {
+  .field-grid { grid-template-columns: 1fr; }
+  .sample-grid { grid-template-columns: 1fr; }
+  .ev-row { grid-template-columns: 1fr; }
+  .ev-row .span2 { grid-column: span 1; }
+  .hero h1 { font-size: 1.6rem; }
+}
