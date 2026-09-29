@@ -1,0 +1,11 @@
+services:
+  tvc-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Set to enable HMAC operator signatures on verdict receipts.
+      # Leave empty for integrity-verifiable (verdict_hash) receipts only.
+      - TVC_RECEIPT_SECRET=${TVC_RECEIPT_SECRET:-}
+      - PORT=8000
+    restart: unless-stopped

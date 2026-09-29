@@ -31,6 +31,17 @@
       gets &ldquo;insufficient data&rdquo;, never a number.</p>
   </section>
 
+  <section class="quickstart" aria-label="60-second quickstart">
+    <h2>Try it in 60 seconds</h2>
+    <ol class="qs-steps">
+      <li>Press <button class="btn primary qs-btn" id="btn-quickstart" type="button">Run a sample verdict &rarr;</button> &mdash; no signup, no API key, nothing to type.</li>
+      <li>Read the verdict card: <span class="mono">Aegis</span> scores <span class="mono">0.535</span>, band <em>&ldquo;thin&rdquo;</em> &mdash; 6 verified evidence items across 3 families, every number cited in the breakdown below the card.</li>
+      <li>Open <em>Evidence breakdown</em> for the full trail &mdash; or run the <em>Cold-start agent</em> sample next: thin evidence gets an honest <strong>&ldquo;insufficient data&rdquo;</strong>. The engine never invents a score.</li>
+    </ol>
+    <p class="qs-demo">Dogfood demo: we ran the checker on <span class="mono">KingCode</span>, our own agent &mdash; score <span class="mono">0.429</span> (<em>thin</em>), full evidence trail, warts and all. <a href="demo.html">Watch it run &rarr;</a></p>
+    <p class="hint">Scoring runs entirely in your browser &mdash; nothing you paste is uploaded anywhere.</p>
+  </section>
+
   <nav class="tabs" role="tablist" aria-label="Input methods">
     <button class="tab active" id="tab-guided" role="tab" aria-selected="true" aria-controls="panel-guided">Guided form</button>
     <button class="tab" id="tab-paste" role="tab" aria-selected="false" aria-controls="panel-paste">Paste JSON</button>

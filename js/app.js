@@ -227,9 +227,23 @@
       card.appendChild(el("p", null, s.desc));
       var btn = el("button", "btn", "Load & score →");
       btn.type = "button";
+      btn.setAttribute("data-sample", key);
       btn.addEventListener("click", function () { scoreDoc(s.doc); });
       card.appendChild(btn);
       grid.appendChild(card);
+    });
+  })();
+
+  /* ---------- one-click quickstart: walk the stranger path for them ---------- */
+  (function quickstart() {
+    var qbtn = $("btn-quickstart");
+    if (!qbtn) return;
+    qbtn.addEventListener("click", function () {
+      var tab = $("tab-samples");
+      if (tab) tab.click();
+      var sbtn = document.querySelector('#sample-grid [data-sample="established"]');
+      if (sbtn) { sbtn.click(); return; }
+      showError("Samples failed to load (js/samples.js missing).");
     });
   })();
 
