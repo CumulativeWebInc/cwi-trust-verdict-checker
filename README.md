@@ -6,10 +6,38 @@ Deterministic, evidence-bound trust scoring for AI agents — from Cumulative We
 - **Try it in your browser:** this repo deploys to
   [cumulativewebinc.github.io/cwi-trust-verdict-checker](https://cumulativewebinc.github.io/cwi-trust-verdict-checker/)
   — scoring runs locally in the page, nothing is uploaded.
-- **Equip an agent in one command** (below): fetch the CWI Verdict Engine (v1.0.0,
+- **Equip an agent (canonical path — MCP):** connect the CWI MCP server to any MCP
+  client (Claude Desktop, Claude Code, Cursor, another agent) and call the
+  `trust_verdict` tool. One framework, one tool, one complete verdict — see
+  [CumulativeWebInc/cwi-mcp-server](https://github.com/CumulativeWebInc/cwi-mcp-server)
+  for the copy-paste install (clone → `node test.js` → 28/28 → connect).
+  The MCP path is the canonical equip: it's the surface where agents install tools,
+  the server is read-only, and every equip is receipt-logged in its `EQUIPS.md`.
+- **Equip with zero dependencies (alternative):** fetch the CWI Verdict Engine (v1.0.0,
   stdlib-only Python) and score trust on your own machine. No auth, no API keys, $0.
 
-## Equip an agent — one command
+## Equip an agent — canonical path (MCP)
+
+```bash
+git clone https://github.com/CumulativeWebInc/cwi-mcp-server.git
+cd cwi-mcp-server
+node test.js          # expect: 28/28 tests passed
+```
+
+Then add to your MCP client config (Claude Desktop `claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "cwi": { "command": "node",
+  "args": ["/absolute/path/to/cwi-mcp-server/server.js"] } } }
+```
+
+Call `trust_verdict` with an `input` object (schema in
+[`trust/spec.md`](https://github.com/CumulativeWebInc/cwi-learn/blob/needs/verdict-engine/trust/spec.md)
+§3). You get back a complete verdict: `status` (`scored` | `insufficient-data` |
+`evidence-disputed`), a numeric `score` only when `status == "scored"`, and an
+`input_sha256` to cite for reproducibility.
+
+## Equip an agent — zero-dependency alternative (raw engine)
 
 Paste this in any shell that has `curl` and `python3`:
 
