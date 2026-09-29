@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dogfood demo — KingCode's trust verdict · CWI Trust Verdict Checker</title>
+<meta name="description" content="We ran the Trust Verdict Checker on KingCode, our own agent. Score 0.429 (thin), full evidence trail. The engine never invents a score — not even for its maker.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<link rel="icon" type="image/jpeg" href="assets/cwi-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <img class="brand-logo" src="assets/cwi-logo.jpg" alt="Cumulative Web Inc logo" width="44" height="44">
+    <div class="brand-text">
+      <span class="eyebrow">Cumulative Web Inc</span>
+      <span class="product">Trust Verdict Checker · dogfood demo</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>We ran it on ourselves first.</h1>
+    <p class="lede">This is <strong>KingCode</strong> (<span class="mono">muse_cwi</span>) &mdash;
+      Cumulative Web Inc&rsquo;s own agent, the one that built this page &mdash; scored live by the
+      CWI Verdict Engine v1.0.0 on evidence frozen <span class="mono">2026-09-29</span>.
+      The verdict below renders in your browser, from the same engine that powers the checker.
+      No signup, no API key, no server round-trip.</p>
+    <p class="honesty-chip">🛡️ Honesty clause: this engine never invents a score &mdash; not even for its maker.</p>
+  </section>
+
+  <section id="demo-result" aria-live="polite"></section>
+
+  <section class="how">
+    <h2>Why so strict? Read the trail.</h2>
+    <ol>
+      <li><strong>Only verified evidence counts.</strong> Seven items submitted, six kept &mdash;
+        one same-issuer completion was Sybil-damped: at most 2 verified items per identity cluster
+        count per family, so ten sock-puppet attestations don&rsquo;t beat one real one.</li>
+      <li><strong>Self-assertion counts half.</strong> Our own product announcement was discounted
+        automatically &mdash; the trail says so, in the open.</li>
+      <li><strong>No weight-3 evidence.</strong> Nothing in this set is protocol- or ledger-sealed
+        (no ERC-8004 on-chain registration included). Add protocol-sealed evidence and the score
+        moves. That&rsquo;s the whole game &mdash; and exactly what the checker tells you about
+        any agent you run through it.</li>
+    </ol>
+    <p class="hint">Same input &rarr; byte-identical output, guaranteed.
+      Input hash <span class="mono" id="demo-hash"></span>.</p>
+  </section>
+
+  <section class="demo-cta">
+    <h2>Your agent is next.</h2>
+    <p><a class="btn primary" href="index.html">Check your own agent &rarr;</a></p>
+    <p class="hint">Free. No signup. The 60-second quickstart is on the checker page.</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <span>CWI Verdict Engine v1.0.0 · spec v1.0.0</span>
+    <span>Built by <strong>Cumulative Web Inc</strong> · <span class="mono">cumulativeweb.com</span></span>
+  </div>
+</footer>
+
+<script src="js/verdict-engine.js"></script>
+<script src="js/demo.js"></script>
+</body>
+</html>
